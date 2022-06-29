@@ -1,7 +1,6 @@
 package com.example.serverconnectionukaa;
 
 import android.annotation.SuppressLint;
-import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -16,7 +15,6 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import info.mqtt.android.service.Ack;
@@ -46,7 +44,6 @@ public class    Main3Activity extends AppCompatActivity {
         Window w = getWindow();
         w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
         setContentView(R.layout.activity_main3);
-        ActionBar actionBar = getSupportActionBar();
 
         /////////////////////////////////////////////////////////////////
         brokerAddress = findViewById(R.id.broker_address);
@@ -89,32 +86,27 @@ public class    Main3Activity extends AppCompatActivity {
         String clientId = MqttClient.generateClientId();
         client = new MqttAndroidClient(this.getApplicationContext(), serverURL, clientId, Ack.AUTO_ACK);
 
-        try {
+        IMqttToken token = client.connect();
+        token.setActionCallback(new IMqttActionListener() {
+            @SuppressLint("SetTextI18n")
+            @Override
+            public void onSuccess(IMqttToken asyncActionToken) {
+                connectionStatus.setText("Connected To " + serverURL);
+                connectionFlag = true;
+                sendButton.setEnabled(true);
+                subscribeButton.setEnabled(true);
 
-            IMqttToken token = client.connect();
-            token.setActionCallback(new IMqttActionListener() {
-                @SuppressLint("SetTextI18n")
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    connectionStatus.setText("Connected To " + serverURL);
-                    connectionFlag = true;
-                    sendButton.setEnabled(true);
-                    subscribeButton.setEnabled(true);
-
-                }
+            }
 
 
 
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    Toast.makeText(getApplicationContext(), "Failed", Toast.LENGTH_SHORT).show();
+            @Override
+            public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                Toast.makeText(getApplicationContext(), "Failed", Toast.LENGTH_SHORT).show();
 
-                }
+            }
 
-            });
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
+        });
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +118,7 @@ public class    Main3Activity extends AppCompatActivity {
             MqttMessage message = new MqttMessage(encodedPayload);
             client.publish(topic, message);
             Toast.makeText(getApplicationContext(), "Sent", Toast.LENGTH_SHORT).show();
-        } catch (UnsupportedEncodingException | MqttException e) {
+        } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
     }
@@ -146,7 +138,7 @@ public class    Main3Activity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void messageArrived(String topic, MqttMessage message) throws Exception {
+                    public void messageArrived(String topic, MqttMessage message) {
                         receivedMessage.setText(message.toString());
                     }
 
@@ -163,23 +155,19 @@ public class    Main3Activity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (connectionFlag) {
-            try {
-                IMqttToken disconnectToken = client.disconnect();
-                disconnectToken.setActionCallback(new IMqttActionListener() {
-                    @Override
-                    public void onSuccess(IMqttToken asyncActionToken) {
-                        Toast.makeText(getApplicationContext(), "Disconnected", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
+            IMqttToken disconnectToken = client.disconnect();
+            disconnectToken.setActionCallback(new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    Toast.makeText(getApplicationContext(), "Disconnected", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
 
-                    @Override
-                    public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                        finish();
-                    }
-                });
-            } catch (MqttException e) {
-                e.printStackTrace();
-            }
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    finish();
+                }
+            });
             connectionFlag = false;
         }
     }
